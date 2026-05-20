@@ -16,8 +16,8 @@ agent = OrchestratorAgent(retriever)
 
 @router.post("", response_model=ChatResponse)
 async def chat(request: ChatRequest) -> ChatResponse:
-    if request.java_version not in ["5", "8", "17", "21"]:
-        raise HTTPException(status_code=400, detail="Invalid Java version. Must be one of: 5, 8, 17, 21")
+    if request.java_version not in ["8", "17", "21"]:
+        raise HTTPException(status_code=400, detail="Invalid Java version. Must be one of: 8, 17, 21")
 
     session_id = request.session_id or str(uuid.uuid4())
     return agent.process_query(session_id=session_id, user_query=request.message, java_version=request.java_version)
