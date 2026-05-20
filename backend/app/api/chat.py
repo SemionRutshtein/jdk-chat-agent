@@ -9,10 +9,16 @@ import uuid
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
-vector_store = VectorStore(config.CHROMA_PATH)
-embedder = Embedder(config.EMBEDDING_MODEL)
-retriever = Retriever(vector_store, embedder)
-agent = OrchestratorAgent(retriever)
+_agent = None
+
+def get_agent() -> OrchestratorAgent:
+    global _agent
+    if _agent is None:
+        vector_store = VectorStore(config.CHROMA_PATH)
+        embedder = Embedder(config.EMBEDDING_MODEL)
+        retriever = Retriever(vector_store, embedder)
+        _agent = OrchestratorAgent(retriever)
+    return _agent
 
 @router.post("", response_model=ChatResponse)
 async def chat(request: ChatRequest) -> ChatResponse:
@@ -20,4 +26,4 @@ async def chat(request: ChatRequest) -> ChatResponse:
         raise HTTPException(status_code=400, detail="Invalid Java version. Must be one of: 8, 17, 21")
 
     session_id = request.session_id or str(uuid.uuid4())
-    return agent.process_query(session_id=session_id, user_query=request.message, java_version=request.java_version)
+    return get_agent().process_query(session_id=session_id, user_query=request.message, java_version=request.java_version)

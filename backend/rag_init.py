@@ -30,13 +30,19 @@ def initialize_rag():
                 print(f"  Skipping {pdf_file}: not found")
                 continue
 
-            try:
-                loader = PDFLoader(pdf_path)
-                docs = loader.load_and_chunk(chunk_size=500)
-                print(f"  {pdf_file}: {len(docs)} chunks")
-                all_docs.extend(docs)
-            except Exception as e:
-                print(f"  Error loading {pdf_file}: {e}")
+            for attempt in range(3):
+                try:
+                    loader = PDFLoader(pdf_path)
+                    docs = loader.load_and_chunk(chunk_size=500)
+                    print(f"  {pdf_file}: {len(docs)} chunks")
+                    all_docs.extend(docs)
+                    break
+                except Exception as e:
+                    if attempt < 2:
+                        print(f"  Retry {attempt + 1}/3 for {pdf_file}: {e}")
+                        import time; time.sleep(2)
+                    else:
+                        print(f"  Failed {pdf_file} after 3 attempts: {e}")
 
         if not all_docs:
             print(f"  No docs loaded for Java {version}, skipping")
