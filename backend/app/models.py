@@ -37,6 +37,17 @@ class VersionResponse(BaseModel):
     versions: List[str]
     default: str
 
+class SessionSummary(BaseModel):
+    session_id: str
+    created_at: datetime
+    updated_at: datetime
+    message_count: int
+    last_java_version: Optional[str] = None
+
+class SessionsResponse(BaseModel):
+    sessions: List[SessionSummary]
+    total: int
+
 class HealthResponse(BaseModel):
     status: str
     postgres: bool
