@@ -1,7 +1,8 @@
 import hashlib
+import json
 import logging
 from datetime import datetime
-from typing import List, Optional
+from typing import Generator, List, Optional
 from anthropic import Anthropic
 from app.config import config
 from app.rag.retriever import Retriever
@@ -121,3 +122,62 @@ class OrchestratorAgent:
             cache_hit=False,
             tokens_used=tokens_used
         )
+
+    def stream_query(self, session_id: Optional[str], user_query: str, java_version: str) -> Generator[str, None, None]:
+        """Yield SSE-formatted strings for real-time token streaming."""
+
+        def sse(event_dict: dict) -> str:
+            return f"data: {json.dumps(event_dict)}\n\n"
+
+        retrieved_docs = self.retriever.retrieve(user_query, java_version, k=5)
+
+        if not retrieved_docs:
+            yield sse({"type": "token", "text": f"No relevant documentation found in Java {java_version} docs for your query."})
+            yield sse({"type": "citations", "citations": []})
+            yield sse({"type": "done"})
+            return
+
+        context = "\n\n---\n\n".join([
+            f"[From: {doc['metadata'].get('source', 'unknown')}]\n{doc['text'][:500]}..."
+            for doc in retrieved_docs
+        ])
+        system_prompt = get_system_prompt(java_version, context, user_query)
+
+        full_answer = ""
+        try:
+            with self.client.messages.stream(
+                model=config.CLAUDE_MODEL,
+                max_tokens=1500,
+                system=system_prompt,
+                messages=[{"role": "user", "content": user_query}]
+            ) as stream:
+                for text_delta in stream.text_stream:
+                    full_answer += text_delta
+                    yield sse({"type": "token", "text": text_delta})
+        except Exception as e:
+            logger.error(f"Claude stream error: {e}")
+            yield sse({"type": "error", "message": str(e)})
+            yield sse({"type": "done"})
+            return
+
+        citations = self._extract_citations(full_answer, retrieved_docs)
+        yield sse({"type": "citations", "citations": [c.dict() for c in citations]})
+        yield sse({"type": "done"})
+
+        # persist to DB + cache
+        if session_id:
+            try:
+                session = self.db.query(ChatSession).filter_by(id=session_id).first()
+                if not session:
+                    session = ChatSession(id=session_id)
+                    self.db.add(session)
+                self.db.add(ChatMessage(session_id=session_id, role="user", content=user_query, java_version=java_version))
+                self.db.add(ChatMessage(session_id=session_id, role="assistant", content=full_answer,
+                                        citations=[c.dict() for c in citations], java_version=java_version))
+                self.db.commit()
+            except Exception as e:
+                logger.error(f"DB save error (stream): {e}")
+                self.db.rollback()
+
+        cache_key = self._generate_cache_key(user_query, java_version)
+        redis_client.set(cache_key, {"response": full_answer, "citations": [c.dict() for c in citations]})

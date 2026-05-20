@@ -31,13 +31,20 @@ function UserMessage({ content }) {
     );
 }
 
-function AssistantMessage({ content, citations }) {
+function StreamingCursor() {
+    return (
+        <span className="inline-block w-0.5 h-4 bg-blue-400 ml-0.5 align-middle animate-pulse" />
+    );
+}
+
+function AssistantMessage({ content, citations, streaming }) {
     return (
         <div className="flex justify-start mb-4">
             <div className="max-w-3xl w-full">
                 <div className="flex items-center gap-2 mb-1">
                     <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white">J</div>
                     <span className="text-xs text-gray-500">Java Docs Assistant</span>
+                    {streaming && <span className="text-xs text-blue-400 animate-pulse">● streaming</span>}
                 </div>
                 <div className="bg-gray-800 border border-gray-700 rounded-2xl rounded-tl-sm px-4 py-3">
                     <div className="prose prose-invert prose-sm max-w-none
@@ -47,7 +54,18 @@ function AssistantMessage({ content, citations }) {
                         [&_strong]:text-gray-100 [&_a]:text-blue-400
                         [&_li]:text-gray-200 [&_p]:text-gray-200 [&_p]:leading-relaxed
                         [&_hr]:border-gray-700">
-                        <Markdown>{content}</Markdown>
+                        {content ? (
+                            <>
+                                <Markdown>{content}</Markdown>
+                                {streaming && <StreamingCursor />}
+                            </>
+                        ) : streaming ? (
+                            <div className="flex space-x-1.5 items-center h-5">
+                                <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" />
+                                <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
+                                <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
+                            </div>
+                        ) : null}
                     </div>
 
                     {citations && citations.length > 0 && (
@@ -59,9 +77,11 @@ function AssistantMessage({ content, citations }) {
                         </div>
                     )}
 
-                    <div className="flex justify-end mt-2">
-                        <CopyButton text={content} />
-                    </div>
+                    {!streaming && (
+                        <div className="flex justify-end mt-2">
+                            <CopyButton text={content} />
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -101,18 +121,12 @@ export default function MessageList({ messages, loading }) {
                 {messages.map((msg, i) =>
                     msg.role === 'user'
                         ? <UserMessage key={i} content={msg.content} />
-                        : <AssistantMessage key={i} content={msg.content} citations={msg.citations} />
+                        : <AssistantMessage key={i} content={msg.content} citations={msg.citations} streaming={msg.streaming} />
                 )}
 
-                {loading && (
-                    <div className="flex justify-start mb-4">
-                        <div className="bg-gray-800 border border-gray-700 rounded-2xl rounded-tl-sm px-4 py-3">
-                            <div className="flex space-x-1.5 items-center h-4">
-                                <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" />
-                                <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
-                                <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
-                            </div>
-                        </div>
+                {loading && messages.length === 0 && (
+                    <div className="flex justify-center mt-8">
+                        <span className="text-xs text-gray-500 animate-pulse">Loading history…</span>
                     </div>
                 )}
 
