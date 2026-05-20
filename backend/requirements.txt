@@ -13,3 +13,6 @@ sqlalchemy==2.0.23
 pydantic-settings==2.1.0
 numpy==1.24.4
 rank_bm25==0.2.2
+python-jose[cryptography]==3.3.0
+bcrypt>=4.0.1
+email-validator==2.1.0

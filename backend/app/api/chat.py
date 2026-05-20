@@ -1,6 +1,6 @@
 import logging
 import uuid
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from app.models import ChatRequest, ChatResponse
 from app.agents.orchestrator import OrchestratorAgent
@@ -8,6 +8,8 @@ from app.rag.retriever import Retriever
 from app.rag.vector_store import VectorStore
 from app.rag.embedder import Embedder
 from app.config import config
+from app.auth.dependencies import get_current_user
+from app.database import User
 
 logger = logging.getLogger(__name__)
 
@@ -25,32 +27,33 @@ def get_agent() -> OrchestratorAgent:
     return _agent
 
 @router.post("", response_model=ChatResponse)
-async def chat(request: ChatRequest) -> ChatResponse:
+async def chat(request: ChatRequest, user: User = Depends(get_current_user)) -> ChatResponse:
     if request.java_version not in ["8", "17", "21"]:
         raise HTTPException(status_code=400, detail="Invalid Java version. Must be one of: 8, 17, 21")
 
     session_id = request.session_id or str(uuid.uuid4())
-    logger.info(f"Chat request: version={request.java_version} session={session_id}")
-    return get_agent().process_query(session_id=session_id, user_query=request.message, java_version=request.java_version)
+    logger.info(f"Chat request: version={request.java_version} session={session_id} user={user.email}")
+    return get_agent().process_query(session_id=session_id, user_query=request.message, java_version=request.java_version, user_id=user.id)
 
 
 @router.post("/stream")
-async def chat_stream(request: ChatRequest):
+async def chat_stream(request: ChatRequest, user: User = Depends(get_current_user)):
     if request.java_version not in ["8", "17", "21"]:
         raise HTTPException(status_code=400, detail="Invalid Java version. Must be one of: 8, 17, 21")
 
     session_id = request.session_id or str(uuid.uuid4())
-    logger.info(f"Stream request: version={request.java_version} session={session_id}")
+    logger.info(f"Stream request: version={request.java_version} session={session_id} user={user.email}")
 
     return StreamingResponse(
         get_agent().stream_query(
             session_id=session_id,
             user_query=request.message,
             java_version=request.java_version,
+            user_id=user.id,
         ),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",   # disable nginx buffering if behind proxy
+            "X-Accel-Buffering": "no",
         },
     )

@@ -56,7 +56,7 @@ class OrchestratorAgent:
 
         return citations
 
-    def process_query(self, session_id: Optional[str], user_query: str, java_version: str) -> ChatResponse:
+    def process_query(self, session_id: Optional[str], user_query: str, java_version: str, user_id: Optional[str] = None) -> ChatResponse:
         cache_key = self._generate_cache_key(user_query, java_version)
 
         # Only use cache for first-message queries — history changes the answer
@@ -122,7 +122,7 @@ class OrchestratorAgent:
             try:
                 session = self.db.query(ChatSession).filter_by(id=session_id).first()
                 if not session:
-                    session = ChatSession(id=session_id)
+                    session = ChatSession(id=session_id, user_id=user_id)
                     self.db.add(session)
 
                 self.db.add(ChatMessage(session_id=session_id, role="user", content=user_query, java_version=java_version))
@@ -145,7 +145,7 @@ class OrchestratorAgent:
             tokens_used=tokens_used
         )
 
-    def stream_query(self, session_id: Optional[str], user_query: str, java_version: str) -> Generator[str, None, None]:
+    def stream_query(self, session_id: Optional[str], user_query: str, java_version: str, user_id: Optional[str] = None) -> Generator[str, None, None]:
         """Yield SSE-formatted strings for real-time token streaming."""
 
         def sse(event_dict: dict) -> str:
@@ -194,7 +194,7 @@ class OrchestratorAgent:
             try:
                 session = self.db.query(ChatSession).filter_by(id=session_id).first()
                 if not session:
-                    session = ChatSession(id=session_id)
+                    session = ChatSession(id=session_id, user_id=user_id)
                     self.db.add(session)
                 self.db.add(ChatMessage(session_id=session_id, role="user", content=user_query, java_version=java_version))
                 self.db.add(ChatMessage(session_id=session_id, role="assistant", content=full_answer,

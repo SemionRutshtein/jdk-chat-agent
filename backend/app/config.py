@@ -13,5 +13,8 @@ class Config:
     EMBEDDING_MODEL = "all-MiniLM-L6-v2"
     CACHE_TTL = 3600
     DEBUG = os.getenv("DEBUG", "False") == "True"
+    JWT_SECRET = os.getenv("JWT_SECRET", "change-me-in-production")
+    JWT_ALGORITHM = "HS256"
+    JWT_EXPIRE_DAYS = 7
 
 config = Config()
