@@ -16,7 +16,6 @@ dist/
 
 # Docker volumes
 backend/chroma_data/
-backend/data/*.pdf
 
 # OS
 .DS_Store
