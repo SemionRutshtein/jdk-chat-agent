@@ -45,7 +45,7 @@ function HealthBadge() {
     );
 }
 
-export default function Chat() {
+export default function Chat({ user, onLogout }) {
     const [sessionId, setSessionId] = useState(() => {
         return localStorage.getItem(LS_KEY) || genSessionId();
     });
@@ -193,14 +193,23 @@ export default function Chat() {
                             <HealthBadge />
                         </div>
                         <div className="flex items-center gap-3">
-                            <span className="text-xs text-gray-500 font-mono">
-                                {sessionId.slice(0, 16)}…
-                            </span>
+                            {user && (
+                                <span className="text-xs text-gray-500 hidden sm:block">{user.email}</span>
+                            )}
                             <VersionSelector
                                 versions={versions}
                                 current={javaVersion}
                                 onChange={setJavaVersion}
                             />
+                            {onLogout && (
+                                <button
+                                    onClick={onLogout}
+                                    className="text-xs text-gray-500 hover:text-red-400 transition px-2 py-1 rounded hover:bg-gray-700"
+                                    title="Sign out"
+                                >
+                                    Sign out
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

@@ -2,6 +2,8 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import chat, history, versions, health, sessions
+from app.auth import router as auth_router
+from app.database import init_db
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,6 +25,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+init_db()  # create tables (idempotent)
+
+app.include_router(auth_router.router)
 app.include_router(chat.router)
 app.include_router(history.router)
 app.include_router(sessions.router)

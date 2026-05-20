@@ -1,7 +1,8 @@
 import logging
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from app.models import SessionSummary, SessionsResponse
-from app.database import SessionLocal, ChatSession, ChatMessage
+from app.database import SessionLocal, ChatSession, ChatMessage, User
+from app.auth.dependencies import get_current_user
 from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
@@ -12,14 +13,16 @@ router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 async def list_sessions(
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    user: User = Depends(get_current_user),
 ) -> SessionsResponse:
     """List all chat sessions, newest first."""
     db = SessionLocal()
     try:
-        total = db.query(func.count(ChatSession.id)).scalar()
+        total = db.query(func.count(ChatSession.id)).filter(ChatSession.user_id == user.id).scalar()
 
         sessions = (
             db.query(ChatSession)
+            .filter(ChatSession.user_id == user.id)
             .order_by(ChatSession.updated_at.desc())
             .offset(offset)
             .limit(limit)

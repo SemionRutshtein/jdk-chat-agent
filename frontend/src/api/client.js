@@ -7,6 +7,26 @@ const client = axios.create({
     headers: { 'Content-Type': 'application/json' },
 });
 
+// Attach JWT to every request
+client.interceptors.request.use((config) => {
+    const token = localStorage.getItem('jdk_chat_token');
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+    return config;
+});
+
+// On 401 — clear token so App re-renders to login
+client.interceptors.response.use(
+    (res) => res,
+    (err) => {
+        if (err.response?.status === 401) {
+            localStorage.removeItem('jdk_chat_token');
+            localStorage.removeItem('jdk_chat_user');
+            window.dispatchEvent(new Event('auth:logout'));
+        }
+        return Promise.reject(err);
+    }
+);
+
 export const chatAPI = {
     sendMessage: (sessionId, message, javaVersion) =>
         client.post('/api/chat', { session_id: sessionId, message, java_version: javaVersion }),
@@ -21,9 +41,13 @@ export const chatAPI = {
         const controller = new AbortController();
 
         async function* events() {
+            const token = localStorage.getItem('jdk_chat_token');
             const res = await fetch(`${API_URL}/api/chat/stream`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
                 body: JSON.stringify({ session_id: sessionId, message, java_version: javaVersion }),
                 signal: controller.signal,
             });
@@ -64,6 +88,12 @@ export const chatAPI = {
 
     health: () =>
         client.get('/api/health'),
+
+    register: (email, password) =>
+        client.post('/api/auth/register', { email, password }),
+
+    login: (email, password) =>
+        client.post('/api/auth/login', { email, password }),
 };
 
 export default client;
