@@ -14,6 +14,9 @@ export const chatAPI = {
     getHistory: (sessionId) =>
         client.get(`/api/history/${sessionId}`),
 
+    getSessions: (limit = 20) =>
+        client.get(`/api/sessions?limit=${limit}`),
+
     getVersions: () =>
         client.get('/api/versions'),
 
