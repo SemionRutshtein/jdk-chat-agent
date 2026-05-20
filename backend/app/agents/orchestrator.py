@@ -88,7 +88,7 @@ class OrchestratorAgent:
             )
 
         context = "\n\n---\n\n".join([
-            f"[From: {doc['metadata'].get('source', 'unknown')}]\n{doc['text'][:500]}..."
+            f"[From: {doc['metadata'].get('source', 'unknown')}]\n{doc['text'][:800]}..."
             for doc in retrieved_docs
         ])
 
@@ -101,7 +101,7 @@ class OrchestratorAgent:
         try:
             response = self.client.messages.create(
                 model=config.CLAUDE_MODEL,
-                max_tokens=1500,
+                max_tokens=2000,
                 system=system_prompt,
                 messages=messages,
             )
@@ -160,7 +160,7 @@ class OrchestratorAgent:
             return
 
         context = "\n\n---\n\n".join([
-            f"[From: {doc['metadata'].get('source', 'unknown')}]\n{doc['text'][:500]}..."
+            f"[From: {doc['metadata'].get('source', 'unknown')}]\n{doc['text'][:800]}..."
             for doc in retrieved_docs
         ])
         system_prompt = get_system_prompt(java_version, context)
@@ -172,7 +172,7 @@ class OrchestratorAgent:
         try:
             with self.client.messages.stream(
                 model=config.CLAUDE_MODEL,
-                max_tokens=1500,
+                max_tokens=2000,
                 system=system_prompt,
                 messages=messages,
             ) as stream:
