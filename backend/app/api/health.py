@@ -28,7 +28,7 @@ async def health_check() -> HealthResponse:
     chroma_ok = False
     try:
         vs = VectorStore(config.CHROMA_PATH)
-        vs.get_or_create_collection("5")
+        vs.get_or_create_collection("8")
         chroma_ok = True
     except Exception:
         pass
