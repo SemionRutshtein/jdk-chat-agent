@@ -1,5 +1,5 @@
 import hashlib
-import json
+import logging
 from datetime import datetime
 from typing import List, Optional
 from anthropic import Anthropic
@@ -10,6 +10,8 @@ from app.database import SessionLocal, ChatSession, ChatMessage
 from app.models import Citation, ChatResponse
 from .prompts import get_system_prompt
 import re
+
+logger = logging.getLogger(__name__)
 
 class OrchestratorAgent:
     def __init__(self, retriever: Retriever):
@@ -43,6 +45,7 @@ class OrchestratorAgent:
         cached_result = redis_client.get(cache_key)
 
         if cached_result:
+            logger.info(f"Cache hit: version={java_version} key={cache_key}")
             return ChatResponse(
                 session_id=session_id or "unknown",
                 response=cached_result['response'],
@@ -52,6 +55,7 @@ class OrchestratorAgent:
                 cache_hit=True
             )
 
+        logger.info(f"Cache miss: version={java_version} query={user_query[:60]!r}")
         retrieved_docs = self.retriever.retrieve(user_query, java_version, k=5)
 
         if not retrieved_docs:
@@ -83,8 +87,9 @@ class OrchestratorAgent:
                 "prompt_tokens": response.usage.input_tokens,
                 "completion_tokens": response.usage.output_tokens
             }
+            logger.info(f"Claude response: tokens_in={tokens_used['prompt_tokens']} tokens_out={tokens_used['completion_tokens']}")
         except Exception as e:
-            print(f"Claude API error: {e}")
+            logger.error(f"Claude API error: {e}")
             answer = f"Error calling Claude API: {str(e)}"
             tokens_used = None
 
@@ -101,7 +106,7 @@ class OrchestratorAgent:
                 self.db.add(ChatMessage(session_id=session_id, role="assistant", content=answer, citations=[c.dict() for c in citations], java_version=java_version))
                 self.db.commit()
             except Exception as e:
-                print(f"DB save error: {e}")
+                logger.error(f"DB save error: {e}")
                 self.db.rollback()
 
         cache_data = {'response': answer, 'citations': [c.dict() for c in citations]}

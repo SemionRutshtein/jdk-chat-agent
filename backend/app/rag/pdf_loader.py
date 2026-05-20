@@ -1,4 +1,6 @@
 import PyPDF2
+import shutil
+import tempfile
 from pathlib import Path
 from typing import List, Tuple
 
@@ -7,13 +9,20 @@ class PDFLoader:
         self.pdf_path = pdf_path
 
     def extract_text(self) -> str:
+        # Copy to /tmp first — avoids macOS Docker volume deadlock (EAGAIN/EDEADLK)
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+            shutil.copy2(self.pdf_path, tmp.name)
+            tmp_path = tmp.name
+
         text = ""
-        with open(self.pdf_path, 'rb') as file:
+        with open(tmp_path, 'rb') as file:
             pdf_reader = PyPDF2.PdfReader(file)
             for page_num, page in enumerate(pdf_reader.pages):
                 text += f"[PAGE {page_num + 1}]\n"
                 text += page.extract_text() or ""
                 text += "\n"
+
+        Path(tmp_path).unlink(missing_ok=True)
         return text
 
     def chunk_text(self, text: str, chunk_size: int = 500, overlap: int = 100) -> List[Tuple[str, dict]]:

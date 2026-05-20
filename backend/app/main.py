@@ -1,6 +1,13 @@
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import chat, history, versions, health
+from app.api import chat, history, versions, health, sessions
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Java RAG Agent API",
@@ -18,6 +25,7 @@ app.add_middleware(
 
 app.include_router(chat.router)
 app.include_router(history.router)
+app.include_router(sessions.router)
 app.include_router(versions.router)
 app.include_router(health.router)
 
@@ -28,6 +36,7 @@ async def root():
         "endpoints": {
             "chat": "POST /api/chat",
             "history": "GET /api/history/{session_id}",
+            "sessions": "GET /api/sessions",
             "versions": "GET /api/versions",
             "health": "GET /api/health"
         }
