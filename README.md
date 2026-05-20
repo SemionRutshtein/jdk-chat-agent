@@ -1,65 +1,102 @@
 # Java Oracle Documentation RAG Agent
 
-AI-powered assistant that answers Java questions using official Oracle documentation.
+AI chat assistant that answers Java questions using official Oracle documentation as source of truth. Supports Java 8, 17, 21.
+
+## Stack
+- **Frontend**: React + Vite + Tailwind CSS → http://localhost:3001
+- **Backend**: FastAPI + Claude API (claude-sonnet-4-6) → http://localhost:8000
+- **Vector Store**: Chroma (ONNX embeddings, all-MiniLM-L6-v2)
+- **Cache**: Redis
+- **History**: PostgreSQL
+- **Deploy**: Docker Compose
 
 ## Quick Start
 
-### Prerequisites
-- Docker & Docker Compose
-- Claude API key
-- Java documentation PDFs (5, 8, 17, 21)
+### 1. Clone and configure
 
-### Setup
-
-1. **Clone and setup**:
 ```bash
-git clone <repo>
-cd java-rag-agent
+git clone https://github.com/SemionRutshtein/jdk-chat-agent
+cd jdk-chat-agent
 cp .env.example .env
-# Edit .env and add CLAUDE_API_KEY
+# Edit .env — set CLAUDE_API_KEY=sk-ant-...
 ```
 
-2. **Download Java documentation PDFs**:
-Place the following files in `backend/data/`:
-- `java-5-docs.pdf`
-- `java-8-docs.pdf`
-- `java-17-docs.pdf`
-- `java-21-docs.pdf`
+### 2. Add Java PDFs
 
-3. **Start services**:
+Place these files in `backend/data/`:
+
+| File | Source |
+|------|--------|
+| `java-8-jls.pdf` | Java SE 8 Language Specification |
+| `java-8-jvms.pdf` | Java SE 8 JVM Specification |
+| `java-17-jls.pdf` | Java SE 17 Language Specification |
+| `java-17-jvms.pdf` | Java SE 17 JVM Specification |
+| `java-21-jls.pdf` | Java SE 21 Language Specification |
+| `java-21-jvms.pdf` | Java SE 21 JVM Specification |
+
+Download from https://docs.oracle.com/javase/specs/
+
+### 3. Start services
+
 ```bash
-docker-compose up -d
+docker-compose up -d --build
 ```
 
-4. **Initialize vector store** (first time only):
+### 4. Initialize vector store (first time only)
+
 ```bash
 docker-compose exec backend python rag_init.py
 ```
 
-5. **Access**:
-- Frontend: http://localhost:3000
-- API: http://localhost:8000
-- Health: http://localhost:8000/api/health
+Loads and embeds all PDFs into Chroma (~5 min first run, downloads ONNX model).
+
+### 5. Open the app
+
+- **Chat UI**: http://localhost:3001
+- **API**: http://localhost:8000
+- **Health**: http://localhost:8000/api/health
+
+## API
+
+### POST /api/chat
+```json
+// Request
+{ "session_id": "optional-uuid", "message": "What is a lambda expression?", "java_version": "8" }
+
+// Response
+{
+  "session_id": "uuid",
+  "response": "A lambda expression...",
+  "citations": [{ "text": "PAGE 626", "file_name": "java-8-jls.pdf" }],
+  "source_version": "8",
+  "cache_hit": false,
+  "tokens_used": { "prompt_tokens": 911, "completion_tokens": 425 }
+}
+```
+
+### GET /api/versions → `{ "versions": ["8","17","21"], "default": "8" }`
+### GET /api/history/{session_id} → full message history
+### GET /api/health → postgres / redis / chroma status
 
 ## Architecture
 
 ```
-User Input (React Frontend)
+Browser (React)
+    ↓ POST /api/chat
+FastAPI backend
+    ├── Redis cache check (1h TTL)
+    ├── Chroma vector search (top 5 chunks)
+    └── Claude claude-sonnet-4-6 with RAG context
+         └── Answer + citations from docs
     ↓
-FastAPI Backend
-    ├─ Version Selection (Redis cached)
-    ├─ RAG Pipeline (Chroma VectorDB)
-    └─ Orchestrator Agent (Claude API)
-    ↓
-Response with Citations
-    ↓
-Cache (Redis) + History (PostgreSQL)
+Redis (cache) + PostgreSQL (session history)
 ```
 
-## Tech Stack
-- **Frontend**: React + Vite + Tailwind CSS
-- **Backend**: FastAPI (Python 3.11+) + Claude API
-- **Vector Store**: Chroma (local, in-container)
-- **Cache**: Redis
-- **Database**: PostgreSQL (chat history)
-- **Deployment**: Docker Compose
+## Troubleshooting
+
+| Issue | Fix |
+|-------|-----|
+| "No documents found" | Run `docker-compose exec backend python rag_init.py` |
+| PDF load error (deadlock) | Re-run init — retries 3x automatically |
+| Port 3001 in use | Change `3001:3000` in docker-compose.yml |
+| Claude API error | Check `CLAUDE_API_KEY` in `.env` |
