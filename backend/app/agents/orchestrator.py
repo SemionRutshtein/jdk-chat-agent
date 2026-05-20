@@ -24,6 +24,21 @@ class OrchestratorAgent:
         key_hash = hashlib.md5(f"{java_version}:{query}".encode()).hexdigest()
         return f"query:{key_hash}"
 
+    def _get_history_messages(self, session_id: str, limit: int = 10) -> List[dict]:
+        """Fetch last `limit` messages for session, return as Claude messages array."""
+        try:
+            rows = (
+                self.db.query(ChatMessage)
+                .filter_by(session_id=session_id)
+                .order_by(ChatMessage.created_at.asc())
+                .limit(limit)
+                .all()
+            )
+            return [{"role": row.role, "content": row.content} for row in rows]
+        except Exception as e:
+            logger.warning(f"Could not fetch history for session {session_id}: {e}")
+            return []
+
     def _extract_citations(self, answer: str, retrieved_docs: List[dict]) -> List[Citation]:
         citations = []
         cited_texts = re.findall(r'\[([^\]]+)\]', answer)
@@ -43,18 +58,21 @@ class OrchestratorAgent:
 
     def process_query(self, session_id: Optional[str], user_query: str, java_version: str) -> ChatResponse:
         cache_key = self._generate_cache_key(user_query, java_version)
-        cached_result = redis_client.get(cache_key)
 
-        if cached_result:
-            logger.info(f"Cache hit: version={java_version} key={cache_key}")
-            return ChatResponse(
-                session_id=session_id or "unknown",
-                response=cached_result['response'],
-                citations=[Citation(**c) for c in cached_result['citations']],
-                source_version=java_version,
-                timestamp=datetime.utcnow(),
-                cache_hit=True
-            )
+        # Only use cache for first-message queries — history changes the answer
+        has_history = bool(session_id and self._get_history_messages(session_id, limit=1))
+        if not has_history:
+            cached_result = redis_client.get(cache_key)
+            if cached_result:
+                logger.info(f"Cache hit: version={java_version} key={cache_key}")
+                return ChatResponse(
+                    session_id=session_id or "unknown",
+                    response=cached_result['response'],
+                    citations=[Citation(**c) for c in cached_result['citations']],
+                    source_version=java_version,
+                    timestamp=datetime.utcnow(),
+                    cache_hit=True
+                )
 
         logger.info(f"Cache miss: version={java_version} query={user_query[:60]!r}")
         retrieved_docs = self.retriever.retrieve(user_query, java_version, k=5)
@@ -74,14 +92,18 @@ class OrchestratorAgent:
             for doc in retrieved_docs
         ])
 
-        system_prompt = get_system_prompt(java_version, context, user_query)
+        system_prompt = get_system_prompt(java_version, context)
+
+        # Build messages: history + current user query
+        history = self._get_history_messages(session_id, limit=10) if session_id else []
+        messages = history + [{"role": "user", "content": user_query}]
 
         try:
             response = self.client.messages.create(
                 model=config.CLAUDE_MODEL,
-                max_tokens=1000,
+                max_tokens=1500,
                 system=system_prompt,
-                messages=[{"role": "user", "content": user_query}]
+                messages=messages,
             )
             answer = response.content[0].text
             tokens_used = {
@@ -141,7 +163,10 @@ class OrchestratorAgent:
             f"[From: {doc['metadata'].get('source', 'unknown')}]\n{doc['text'][:500]}..."
             for doc in retrieved_docs
         ])
-        system_prompt = get_system_prompt(java_version, context, user_query)
+        system_prompt = get_system_prompt(java_version, context)
+
+        history = self._get_history_messages(session_id, limit=10) if session_id else []
+        messages = history + [{"role": "user", "content": user_query}]
 
         full_answer = ""
         try:
@@ -149,7 +174,7 @@ class OrchestratorAgent:
                 model=config.CLAUDE_MODEL,
                 max_tokens=1500,
                 system=system_prompt,
-                messages=[{"role": "user", "content": user_query}]
+                messages=messages,
             ) as stream:
                 for text_delta in stream.text_stream:
                     full_answer += text_delta
