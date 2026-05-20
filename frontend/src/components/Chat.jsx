@@ -109,21 +109,66 @@ export default function Chat() {
         }]);
         setLoading(true);
 
+        // placeholder streaming message
+        const streamingMsg = {
+            role: 'assistant',
+            content: '',
+            citations: [],
+            timestamp: new Date().toISOString(),
+            streaming: true,
+        };
+        setMessages(prev => [...prev, streamingMsg]);
+
+        const { events, abort } = chatAPI.streamMessage(sessionId, message, javaVersion);
+
         try {
-            const res = await chatAPI.sendMessage(sessionId, message, javaVersion);
-            setMessages(prev => [...prev, {
-                role: 'assistant',
-                content: res.data.response,
-                citations: res.data.citations,
-                timestamp: res.data.timestamp,
-            }]);
+            for await (const event of events()) {
+                if (event.type === 'token') {
+                    setMessages(prev => {
+                        const next = [...prev];
+                        const last = { ...next[next.length - 1] };
+                        last.content += event.text;
+                        next[next.length - 1] = last;
+                        return next;
+                    });
+                } else if (event.type === 'citations') {
+                    setMessages(prev => {
+                        const next = [...prev];
+                        const last = { ...next[next.length - 1] };
+                        last.citations = event.citations;
+                        next[next.length - 1] = last;
+                        return next;
+                    });
+                } else if (event.type === 'done') {
+                    setMessages(prev => {
+                        const next = [...prev];
+                        const last = { ...next[next.length - 1] };
+                        last.streaming = false;
+                        next[next.length - 1] = last;
+                        return next;
+                    });
+                } else if (event.type === 'error') {
+                    setMessages(prev => {
+                        const next = [...prev];
+                        const last = { ...next[next.length - 1] };
+                        last.content = `⚠️ ${event.message}`;
+                        last.streaming = false;
+                        next[next.length - 1] = last;
+                        return next;
+                    });
+                }
+            }
         } catch (err) {
-            setMessages(prev => [...prev, {
-                role: 'assistant',
-                content: '⚠️ Failed to get response. Please try again.',
-                citations: [],
-                timestamp: new Date().toISOString(),
-            }]);
+            if (err.name !== 'AbortError') {
+                setMessages(prev => {
+                    const next = [...prev];
+                    const last = { ...next[next.length - 1] };
+                    last.content = last.content || '⚠️ Connection error. Please try again.';
+                    last.streaming = false;
+                    next[next.length - 1] = last;
+                    return next;
+                });
+            }
         } finally {
             setLoading(false);
         }
