@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Runtime injection (Railway) takes precedence over build-time env var
+const API_URL = window.__API_URL__ || import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const client = axios.create({
     baseURL: API_URL,

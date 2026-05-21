@@ -1,0 +1,30 @@
+# Railway deployment configuration
+# https://docs.railway.app/reference/config-as-code
+
+[build]
+# Each service is configured in the Railway dashboard
+# pointing to the relevant Dockerfile below
+
+# ─── BACKEND service ─────────────────────────────────────────────────────────
+# Dockerfile: backend/Dockerfile
+# Build context: backend/
+# Required env vars:
+#   CLAUDE_API_KEY     = your Anthropic API key
+#   POSTGRES_URL       = ${{Postgres.DATABASE_URL}}
+#   REDIS_URL          = ${{Redis.REDIS_URL}}
+#   JWT_SECRET         = <generate a secure random string>
+#   DEBUG              = False
+# Note: PORT is injected automatically by Railway
+
+# ─── FRONTEND service ─────────────────────────────────────────────────────────
+# Dockerfile: frontend/Dockerfile
+# Build context: frontend/
+# Required env vars:
+#   VITE_API_URL = https://<your-backend-service>.railway.app
+# Note: PORT is injected automatically by Railway; nginx listens on 3000
+
+# ─── POSTGRES ────────────────────────────────────────────────────────────────
+# Add Railway Postgres plugin — reference as ${{Postgres.DATABASE_URL}}
+
+# ─── REDIS ───────────────────────────────────────────────────────────────────
+# Add Railway Redis plugin — reference as ${{Redis.REDIS_URL}}

@@ -4,7 +4,9 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Java RAG Agent</title>
+    <title>Java Docs Assistant</title>
+    <!-- Runtime API URL injection (set by docker-entrypoint.sh on Railway) -->
+    <script src="/config.js" onerror="window.__API_URL__=undefined"></script>
   </head>
   <body>
     <div id="root"></div>

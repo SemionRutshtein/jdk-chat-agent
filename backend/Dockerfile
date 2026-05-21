@@ -14,7 +14,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app/ ./app/
 COPY init_db.py .
 COPY rag_init.py .
+COPY data/ ./data/
+
+COPY start.sh .
+RUN chmod +x start.sh
 
 EXPOSE 8000
 
-CMD python init_db.py && uvicorn app.main:app --host 0.0.0.0 --port 8000
+CMD ["./start.sh"]
