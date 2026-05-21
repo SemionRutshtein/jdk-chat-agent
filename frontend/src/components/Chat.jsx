@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useReducer } from 'react';
 import { chatAPI } from '../api/client';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
@@ -57,6 +57,7 @@ export default function Chat({ user, onLogout }) {
     const [versions, setVersions] = useState(['8', '17', '21']);
     const [historyLoading, setHistoryLoading] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [sidebarRefreshKey, setSidebarRefreshKey] = useState(0);
 
     const streamRef = useRef(null);
     const sessionIdRef = useRef(sessionId);
@@ -168,6 +169,7 @@ export default function Chat({ user, onLogout }) {
                         next[next.length - 1] = last;
                         return next;
                     });
+                    setSidebarRefreshKey(k => k + 1);
                 } else if (event.type === 'error') {
                     setMessages(prev => {
                         const next = [...prev];
@@ -217,6 +219,7 @@ export default function Chat({ user, onLogout }) {
                     currentSessionId={sessionId}
                     onSelectSession={handleSelectSession}
                     onNewSession={handleNewSession}
+                    refreshKey={sidebarRefreshKey}
                 />
             </div>
 

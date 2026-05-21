@@ -43,6 +43,7 @@ class SessionSummary(BaseModel):
     updated_at: datetime
     message_count: int
     last_java_version: Optional[str] = None
+    first_message: Optional[str] = None
 
 class SessionsResponse(BaseModel):
     sessions: List[SessionSummary]
