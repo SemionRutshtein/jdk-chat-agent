@@ -7,6 +7,10 @@ export default function MessageInput({ onSend, disabled }) {
     const textareaRef = useRef(null);
 
     useEffect(() => {
+        if (!disabled) textareaRef.current?.focus();
+    }, [disabled]);
+
+    useEffect(() => {
         const el = textareaRef.current;
         if (!el) return;
         el.style.height = 'auto';

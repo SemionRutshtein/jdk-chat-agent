@@ -33,12 +33,16 @@ async def list_sessions(
         for s in sessions:
             msg_count = len(s.messages)
             last_version = None
-            if s.messages:
-                # last message with a java_version set
-                for msg in reversed(s.messages):
-                    if msg.java_version:
-                        last_version = msg.java_version
-                        break
+            first_message = None
+            for msg in s.messages:
+                if msg.role == "user" and first_message is None:
+                    first_message = msg.content[:80]
+                if msg.java_version and last_version is None:
+                    pass
+            for msg in reversed(s.messages):
+                if msg.java_version:
+                    last_version = msg.java_version
+                    break
 
             summaries.append(SessionSummary(
                 session_id=s.id,
@@ -46,6 +50,7 @@ async def list_sessions(
                 updated_at=s.updated_at,
                 message_count=msg_count,
                 last_java_version=last_version,
+                first_message=first_message,
             ))
 
         logger.info(f"Listed {len(summaries)} sessions (total={total})")

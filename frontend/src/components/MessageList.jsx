@@ -125,9 +125,7 @@ function StarterGrid({ onPick, disabled }) {
 
     useEffect(() => {
         const handler = (e) => {
-            const t = e.target;
-            if (t && typeof t.closest === 'function' && t.closest('input,textarea,select,button')) return;
-            const tag = (t && t.tagName) || '';
+            const tag = (e.target && e.target.tagName) || '';
             if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
             if (e.metaKey || e.ctrlKey || e.altKey) return;
             const n = parseInt(e.key, 10);

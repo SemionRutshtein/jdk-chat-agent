@@ -127,6 +127,7 @@ class OrchestratorAgent:
 
                 self.db.add(ChatMessage(session_id=session_id, role="user", content=user_query, java_version=java_version))
                 self.db.add(ChatMessage(session_id=session_id, role="assistant", content=answer, citations=[c.dict() for c in citations], java_version=java_version))
+                session.updated_at = datetime.utcnow()
                 self.db.commit()
             except Exception as e:
                 logger.error(f"DB save error: {e}")
@@ -199,6 +200,7 @@ class OrchestratorAgent:
                 self.db.add(ChatMessage(session_id=session_id, role="user", content=user_query, java_version=java_version))
                 self.db.add(ChatMessage(session_id=session_id, role="assistant", content=full_answer,
                                         citations=[c.dict() for c in citations], java_version=java_version))
+                session.updated_at = datetime.utcnow()
                 self.db.commit()
             except Exception as e:
                 logger.error(f"DB save error (stream): {e}")

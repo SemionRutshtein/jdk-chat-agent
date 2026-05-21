@@ -10,7 +10,7 @@ async def get_chat_history(session_id: str, user: User = Depends(get_current_use
     db = SessionLocal()
     try:
         session = db.query(ChatSession).filter_by(id=session_id).first()
-        if not session:
+        if not session or (session.user_id and session.user_id != user.id):
             raise HTTPException(status_code=404, detail="Session not found")
 
         messages = [

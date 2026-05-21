@@ -9,7 +9,14 @@ const VERSION_CHIP = {
 
 function formatTime(ts) {
     const d = new Date(ts);
-    return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    const now = new Date();
+    const diffMs = now - d;
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 export function bucketByDay(sessions, now = new Date()) {
@@ -38,23 +45,25 @@ function GroupLabel({ children }) {
 
 function SessionRow({ session, active, onClick }) {
     const v = VERSION_CHIP[session.last_java_version] || { ring: 'border-rule', dot: 'bg-ink-4', label: 'text-ink-3' };
+    const title = session.first_message || `Session ${session.session_id.slice(-6)}`;
+
     return (
         <button
             type="button"
             onClick={onClick}
             aria-current={active ? 'true' : undefined}
-            className={`group w-full text-left px-3 py-2 rounded-input relative transition-colors duration-short ease-out ${
+            className={`group w-full text-left px-3 py-2.5 rounded-input relative transition-colors duration-short ease-out ${
                 active
                     ? 'bg-paper-3 text-ink accent-bar'
                     : 'text-ink-3 hover:bg-paper-3/60 hover:text-ink-2'
             }`}
         >
-            <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-mono truncate max-w-[8rem]">
-                    {session.session_id.slice(8, 22)}
+            <div className="flex items-start justify-between gap-2 mb-1">
+                <span className="text-xs font-medium text-ink-2 line-clamp-1 leading-tight flex-1 min-w-0">
+                    {title}
                 </span>
                 {session.last_java_version && (
-                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded-pill border ${v.ring} ${v.label}`}>
+                    <span className={`flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded-pill border ${v.ring} ${v.label}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${v.dot}`} />
                         J{session.last_java_version}
                     </span>
@@ -68,7 +77,26 @@ function SessionRow({ session, active, onClick }) {
     );
 }
 
-export default function SessionSidebar({ currentSessionId, onSelectSession, onNewSession }) {
+function SessionGroup({ sessions, label, currentSessionId, onSelectSession }) {
+    if (!sessions.length) return null;
+    return (
+        <>
+            <GroupLabel>{label}</GroupLabel>
+            <div className="space-y-0.5">
+                {sessions.map(s => (
+                    <SessionRow
+                        key={s.session_id}
+                        session={s}
+                        active={s.session_id === currentSessionId}
+                        onClick={() => onSelectSession(s.session_id)}
+                    />
+                ))}
+            </div>
+        </>
+    );
+}
+
+export default function SessionSidebar({ currentSessionId, onSelectSession, onNewSession, refreshKey }) {
     const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [query, setQuery] = useState('');
@@ -79,24 +107,26 @@ export default function SessionSidebar({ currentSessionId, onSelectSession, onNe
             const res = await chatAPI.getSessions(50);
             setSessions(res.data.sessions || []);
         } catch {
-            // silent
+            // silent — auth error handled globally
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => { load(); }, [currentSessionId]);
+    useEffect(() => { load(); }, [currentSessionId, refreshKey]);
 
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
         if (!q) return sessions;
         return sessions.filter(s =>
+            (s.first_message || '').toLowerCase().includes(q) ||
             s.session_id.toLowerCase().includes(q) ||
             String(s.last_java_version || '').includes(q)
         );
     }, [sessions, query]);
 
     const groups = useMemo(() => bucketByDay(filtered), [filtered]);
+    const hasAny = filtered.length > 0;
 
     return (
         <aside className="w-72 sm:w-64 h-full flex-shrink-0 bg-paper-2/80 backdrop-blur-md border-r border-rule flex flex-col">
@@ -112,7 +142,6 @@ export default function SessionSidebar({ currentSessionId, onSelectSession, onNe
                     type="button"
                     onClick={onNewSession}
                     className="btn-primary w-full py-2 text-xs flex items-center justify-center gap-1.5"
-                    title="New chat session"
                     aria-label="Start new chat session"
                 >
                     <span className="text-base leading-none">+</span> New chat
@@ -125,69 +154,52 @@ export default function SessionSidebar({ currentSessionId, onSelectSession, onNe
                     type="search"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Filter sessions…"
+                    placeholder="Search sessions…"
                     className="input-base w-full text-xs py-1.5"
-                    aria-label="Filter sessions"
+                    aria-label="Search sessions"
                 />
             </div>
 
             {/* List */}
             <nav className="flex-1 overflow-y-auto px-2 pb-2" aria-label="Chat sessions">
                 {loading && (
-                    <div className="px-3 py-2 text-xs text-ink-4">Loading…</div>
-                )}
-                {!loading && filtered.length === 0 && (
-                    <div className="px-3 py-6 text-xs text-ink-4 text-center">
-                        {query ? 'No matches' : 'No sessions yet — start one above.'}
+                    <div className="space-y-1.5 px-1 pt-1">
+                        {[1,2,3].map(i => (
+                            <div key={i} className="h-14 bg-paper-3/40 rounded-input animate-pulse" />
+                        ))}
                     </div>
                 )}
 
-                {groups.today.length > 0 && <GroupLabel>Today</GroupLabel>}
-                <div className="space-y-0.5">
-                    {groups.today.map(s => (
-                        <SessionRow
-                            key={s.session_id}
-                            session={s}
-                            active={s.session_id === currentSessionId}
-                            onClick={() => onSelectSession(s.session_id)}
-                        />
-                    ))}
-                </div>
+                {!loading && !hasAny && (
+                    <div className="px-3 py-8 text-center">
+                        <p className="text-xs text-ink-4">
+                            {query ? 'No matching sessions' : 'No sessions yet'}
+                        </p>
+                        {!query && (
+                            <p className="text-[11px] text-ink-4 mt-1">Start a new chat above</p>
+                        )}
+                    </div>
+                )}
 
-                {groups.yesterday.length > 0 && <GroupLabel>Yesterday</GroupLabel>}
-                <div className="space-y-0.5">
-                    {groups.yesterday.map(s => (
-                        <SessionRow
-                            key={s.session_id}
-                            session={s}
-                            active={s.session_id === currentSessionId}
-                            onClick={() => onSelectSession(s.session_id)}
-                        />
-                    ))}
-                </div>
-
-                {groups.earlier.length > 0 && <GroupLabel>Earlier</GroupLabel>}
-                <div className="space-y-0.5">
-                    {groups.earlier.map(s => (
-                        <SessionRow
-                            key={s.session_id}
-                            session={s}
-                            active={s.session_id === currentSessionId}
-                            onClick={() => onSelectSession(s.session_id)}
-                        />
-                    ))}
-                </div>
+                {!loading && hasAny && (
+                    <>
+                        <SessionGroup label="Today" sessions={groups.today} currentSessionId={currentSessionId} onSelectSession={onSelectSession} />
+                        <SessionGroup label="Yesterday" sessions={groups.yesterday} currentSessionId={currentSessionId} onSelectSession={onSelectSession} />
+                        <SessionGroup label="Earlier" sessions={groups.earlier} currentSessionId={currentSessionId} onSelectSession={onSelectSession} />
+                    </>
+                )}
             </nav>
 
             {/* Refresh */}
             <button
                 type="button"
                 onClick={load}
-                className="px-4 py-3 text-[11px] font-mono uppercase tracking-wider text-ink-4 hover:text-accent border-t border-rule transition-colors duration-short ease-out flex items-center gap-1.5"
-                title="Refresh session list"
+                disabled={loading}
+                className="px-4 py-3 text-[11px] font-mono uppercase tracking-wider text-ink-4 hover:text-accent border-t border-rule transition-colors duration-short ease-out flex items-center gap-1.5 disabled:opacity-50"
                 aria-label="Refresh sessions"
             >
-                <span aria-hidden>↻</span> Refresh
+                <span aria-hidden className={loading ? 'animate-spin inline-block' : ''}>↻</span>
+                {loading ? 'Loading…' : 'Refresh'}
             </button>
         </aside>
     );
