@@ -26,10 +26,13 @@ async def health_check() -> HealthResponse:
         pass
 
     chroma_ok = False
+    rag_ready = False
     try:
         vs = VectorStore(config.CHROMA_PATH)
-        vs.get_or_create_collection("8")
+        col = vs.get_or_create_collection("8")
+        count = col.count()
         chroma_ok = True
+        rag_ready = count > 0
     except Exception:
         pass
 
@@ -37,5 +40,6 @@ async def health_check() -> HealthResponse:
         status="ok" if all([postgres_ok, redis_ok, chroma_ok]) else "degraded",
         postgres=postgres_ok,
         redis=redis_ok,
-        chroma=chroma_ok
+        chroma=chroma_ok,
+        rag_ready=rag_ready,
     )
