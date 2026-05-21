@@ -196,18 +196,23 @@ docker compose logs -f backend
 
 | URL | Description |
 |---|---|
-| http://localhost:3001 | Chat UI |
-| http://localhost:8000/docs | **Swagger UI** — interactive API explorer |
-| http://localhost:8000/redoc | ReDoc — readable API reference |
-| http://localhost:8000/api/health | Service health + chunk counts per version |
+| http://localhost:3001 | Chat UI (local) |
+| http://localhost:8000/docs | **Swagger UI** — interactive API explorer (local) |
+| http://localhost:8000/redoc | ReDoc — readable API reference (local) |
+| http://localhost:8000/api/health | Service health + chunk counts (local) |
+| https://jdkinfoagent.up.railway.app | Chat UI (production) |
+| https://jdkinfoagentb.up.railway.app/docs | Swagger UI (production) |
+| https://jdkinfoagentb.up.railway.app/api/health | Health check (production) |
 
-**First use**: open http://localhost:3001 → **Register** → start chatting.
+**First use**: open https://jdkinfoagent.up.railway.app → **Register** → start chatting.
 
 ---
 
 ## API Reference
 
-Interactive docs with request/response schemas and live testing: **http://localhost:8000/docs**
+Interactive docs with request/response schemas and live testing:
+- **Local**: http://localhost:8000/docs
+- **Production**: https://jdkinfoagentb.up.railway.app/docs
 
 ### Authentication
 
@@ -349,7 +354,7 @@ Railway → **frontend** service → **Settings → Source → Root Directory**:
 Railway → **frontend** service → **Variables**:
 
 ```
-VITE_API_URL   https://YOUR_BACKEND_DOMAIN.railway.app
+VITE_API_URL   https://jdkinfoagentb.up.railway.app
 ```
 
 > Find the backend's public domain: Railway → backend → **Settings → Networking → Public URL**. You will send this domain after Railway assigns it.
