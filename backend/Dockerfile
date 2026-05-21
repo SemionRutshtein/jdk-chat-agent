@@ -9,15 +9,15 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app/ ./app/
-COPY init_db.py .
-COPY rag_init.py .
-COPY data/ ./data/
+COPY backend/app/ ./app/
+COPY backend/init_db.py .
+COPY backend/rag_init.py .
+COPY backend/data/ ./data/
 
-COPY start.sh .
+COPY backend/start.sh .
 RUN chmod +x start.sh
 
 EXPOSE 8000
