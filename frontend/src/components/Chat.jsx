@@ -12,7 +12,7 @@ function genSessionId() {
 }
 
 function HealthBadge() {
-    const [status, setStatus] = useState('checking'); // 'ok' | 'error' | 'checking'
+    const [status, setStatus] = useState('checking');
 
     useEffect(() => {
         let cancelled = false;
@@ -29,18 +29,16 @@ function HealthBadge() {
         return () => { cancelled = true; clearInterval(id); };
     }, []);
 
-    const dot = status === 'ok'
-        ? 'bg-emerald-400'
-        : status === 'error'
-        ? 'bg-red-500'
-        : 'bg-yellow-400 animate-pulse';
-
-    const label = status === 'ok' ? 'Online' : status === 'error' ? 'Offline' : 'Checking';
+    const styles = {
+        ok:      { dot: 'bg-ok',     ring: 'border-ok/40',     label: 'Online'   },
+        error:   { dot: 'bg-accent', ring: 'border-accent/40', label: 'Offline'  },
+        checking:{ dot: 'bg-warn animate-pulse', ring: 'border-warn/40', label: 'Checking' },
+    }[status];
 
     return (
-        <span className="inline-flex items-center gap-1.5 text-xs text-gray-400">
-            <span className={`w-2 h-2 rounded-full ${dot}`} />
-            {label}
+        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-ink-3 bg-paper-3/50 border ${styles.ring} rounded-pill`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${styles.dot}`} />
+            {styles.label}
         </span>
     );
 }
@@ -55,12 +53,10 @@ export default function Chat({ user, onLogout }) {
     const [versions, setVersions] = useState(['8', '17', '21']);
     const [historyLoading, setHistoryLoading] = useState(false);
 
-    // persist session id
     useEffect(() => {
         localStorage.setItem(LS_KEY, sessionId);
     }, [sessionId]);
 
-    // load versions
     useEffect(() => {
         chatAPI.getVersions()
             .then(res => {
@@ -70,7 +66,6 @@ export default function Chat({ user, onLogout }) {
             .catch(() => {});
     }, []);
 
-    // load history when session changes
     const loadHistory = useCallback(async (sid) => {
         setHistoryLoading(true);
         setMessages([]);
@@ -78,7 +73,7 @@ export default function Chat({ user, onLogout }) {
             const res = await chatAPI.getHistory(sid);
             setMessages(res.data.messages || []);
         } catch {
-            // new session — no history
+            // new session
         } finally {
             setHistoryLoading(false);
         }
@@ -109,7 +104,6 @@ export default function Chat({ user, onLogout }) {
         }]);
         setLoading(true);
 
-        // placeholder streaming message
         const streamingMsg = {
             role: 'assistant',
             content: '',
@@ -119,7 +113,7 @@ export default function Chat({ user, onLogout }) {
         };
         setMessages(prev => [...prev, streamingMsg]);
 
-        const { events, abort } = chatAPI.streamMessage(sessionId, message, javaVersion);
+        const { events } = chatAPI.streamMessage(sessionId, message, javaVersion);
 
         try {
             for await (const event of events()) {
@@ -151,7 +145,7 @@ export default function Chat({ user, onLogout }) {
                     setMessages(prev => {
                         const next = [...prev];
                         const last = { ...next[next.length - 1] };
-                        last.content = `⚠️ ${event.message}`;
+                        last.content = `⚠ ${event.message}`;
                         last.streaming = false;
                         next[next.length - 1] = last;
                         return next;
@@ -163,7 +157,7 @@ export default function Chat({ user, onLogout }) {
                 setMessages(prev => {
                     const next = [...prev];
                     const last = { ...next[next.length - 1] };
-                    last.content = last.content || '⚠️ Connection error. Please try again.';
+                    last.content = last.content || '⚠ Connection error. Please try again.';
                     last.streaming = false;
                     next[next.length - 1] = last;
                     return next;
@@ -175,26 +169,28 @@ export default function Chat({ user, onLogout }) {
     };
 
     return (
-        <div className="flex h-screen bg-gray-900 text-gray-100 overflow-hidden">
-            {/* Sidebar */}
+        <div className="flex h-screen text-ink overflow-hidden">
             <SessionSidebar
                 currentSessionId={sessionId}
                 onSelectSession={handleSelectSession}
                 onNewSession={handleNewSession}
             />
 
-            {/* Main area */}
             <div className="flex flex-col flex-1 min-w-0">
                 {/* Header */}
-                <div className="bg-gray-800 border-b border-gray-700 px-4 py-3 flex-shrink-0">
-                    <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-lg font-bold text-white">Java Docs Assistant</h1>
+                <header className="bg-paper-2/60 backdrop-blur-sm border-b border-rule px-4 py-3 flex-shrink-0">
+                    <div className="flex justify-between items-center gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                            <h1 className="font-display text-base font-semibold text-ink tracking-tight truncate">
+                                Java Docs <span className="text-accent">Assistant</span>
+                            </h1>
                             <HealthBadge />
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                             {user && (
-                                <span className="text-xs text-gray-500 hidden sm:block">{user.email}</span>
+                                <span className="hidden sm:inline-block text-[11px] font-mono text-ink-4 truncate max-w-[14ch]">
+                                    {user.email}
+                                </span>
                             )}
                             <VersionSelector
                                 versions={versions}
@@ -204,7 +200,7 @@ export default function Chat({ user, onLogout }) {
                             {onLogout && (
                                 <button
                                     onClick={onLogout}
-                                    className="text-xs text-gray-500 hover:text-red-400 transition px-2 py-1 rounded hover:bg-gray-700"
+                                    className="btn-ghost text-[11px] font-mono uppercase tracking-wider hover:text-accent"
                                     title="Sign out"
                                 >
                                     Sign out
@@ -212,15 +208,14 @@ export default function Chat({ user, onLogout }) {
                             )}
                         </div>
                     </div>
-                </div>
+                </header>
 
-                {/* Messages */}
                 <MessageList
                     messages={messages}
                     loading={loading || historyLoading}
+                    onPickStarter={handleSendMessage}
                 />
 
-                {/* Input */}
                 <MessageInput
                     onSend={handleSendMessage}
                     disabled={loading || historyLoading}
