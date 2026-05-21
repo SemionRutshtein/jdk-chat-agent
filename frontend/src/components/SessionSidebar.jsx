@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { chatAPI } from '../api/client';
 
-const VERSION_COLORS = {
-    '8':  'bg-amber-700 text-amber-100',
-    '17': 'bg-blue-700 text-blue-100',
-    '21': 'bg-emerald-700 text-emerald-100',
+const VERSION_CHIP = {
+    '8':  { ring: 'border-accent-soft', dot: 'bg-accent-deep', label: 'text-ink-2' },
+    '17': { ring: 'border-rule-2',      dot: 'bg-ink-3',       label: 'text-ink-2' },
+    '21': { ring: 'border-accent',      dot: 'bg-accent',      label: 'text-ink' },
 };
 
 function formatDate(ts) {
@@ -22,7 +22,7 @@ export default function SessionSidebar({ currentSessionId, onSelectSession, onNe
             const res = await chatAPI.getSessions(30);
             setSessions(res.data.sessions || []);
         } catch {
-            // backend unreachable — silent fail
+            // silent
         } finally {
             setLoading(false);
         }
@@ -31,49 +31,66 @@ export default function SessionSidebar({ currentSessionId, onSelectSession, onNe
     useEffect(() => { load(); }, [currentSessionId]);
 
     return (
-        <div className="w-64 bg-gray-900 border-r border-gray-700 flex flex-col h-full">
-            {/* Header */}
-            <div className="p-3 border-b border-gray-700 flex items-center justify-between">
-                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Sessions</span>
+        <aside className="w-64 flex-shrink-0 bg-paper-2/60 backdrop-blur-sm border-r border-rule flex flex-col h-full">
+            {/* Wordmark */}
+            <div className="px-4 py-4 border-b border-rule flex items-center gap-2">
+                <span className="wordmark-dot" />
+                <span className="font-display font-semibold text-sm tracking-tight text-ink">jdk · agent</span>
+            </div>
+
+            {/* New chat */}
+            <div className="p-3">
                 <button
                     onClick={onNewSession}
-                    className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded transition"
+                    className="btn-primary w-full py-2 text-xs flex items-center justify-center gap-1.5"
                     title="New chat session"
                 >
-                    + New
+                    <span className="text-base leading-none">+</span> New chat
                 </button>
             </div>
 
+            {/* Section label */}
+            <div className="px-4 pb-2">
+                <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-4">
+                    Recent
+                </span>
+            </div>
+
             {/* Session list */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-0.5">
                 {loading && (
-                    <div className="p-3 text-xs text-gray-500">Loading…</div>
+                    <div className="px-3 py-2 text-xs text-ink-4">Loading…</div>
                 )}
                 {!loading && sessions.length === 0 && (
-                    <div className="p-3 text-xs text-gray-500">No sessions yet</div>
+                    <div className="px-3 py-2 text-xs text-ink-4">No sessions yet</div>
                 )}
                 {sessions.map(s => {
                     const isActive = s.session_id === currentSessionId;
-                    const vColor = VERSION_COLORS[s.last_java_version] || 'bg-gray-700 text-gray-200';
+                    const v = VERSION_CHIP[s.last_java_version] || { ring: 'border-rule', dot: 'bg-ink-4', label: 'text-ink-3' };
                     return (
                         <button
                             key={s.session_id}
                             onClick={() => onSelectSession(s.session_id)}
-                            className={`w-full text-left p-3 border-b border-gray-800 hover:bg-gray-800 transition ${isActive ? 'bg-gray-800 border-l-2 border-l-blue-500' : ''}`}
+                            className={`group w-full text-left px-3 py-2 rounded-input relative transition-colors duration-short ease-out ${
+                                isActive
+                                    ? 'bg-paper-3 text-ink accent-bar'
+                                    : 'text-ink-3 hover:bg-paper-3/60 hover:text-ink-2'
+                            }`}
                         >
                             <div className="flex items-center justify-between mb-1">
-                                <span className="text-xs text-gray-300 font-mono truncate w-28">
-                                    {s.session_id.slice(0, 8)}…
+                                <span className="text-xs font-mono truncate max-w-[8rem]">
+                                    {s.session_id.slice(0, 12)}…
                                 </span>
                                 {s.last_java_version && (
-                                    <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${vColor}`}>
-                                        Java {s.last_java_version}
+                                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded-pill border ${v.ring} ${v.label}`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${v.dot}`} />
+                                        J{s.last_java_version}
                                     </span>
                                 )}
                             </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs text-gray-500">{s.message_count} msgs</span>
-                                <span className="text-xs text-gray-600">{formatDate(s.updated_at)}</span>
+                            <div className="flex items-center justify-between text-[11px] text-ink-4">
+                                <span>{s.message_count} msg{s.message_count === 1 ? '' : 's'}</span>
+                                <span>{formatDate(s.updated_at)}</span>
                             </div>
                         </button>
                     );
@@ -83,10 +100,11 @@ export default function SessionSidebar({ currentSessionId, onSelectSession, onNe
             {/* Refresh */}
             <button
                 onClick={load}
-                className="p-2 text-xs text-gray-600 hover:text-gray-400 border-t border-gray-800 transition"
+                className="px-4 py-3 text-[11px] font-mono uppercase tracking-wider text-ink-4 hover:text-accent border-t border-rule transition-colors duration-short ease-out flex items-center gap-1.5"
+                title="Refresh session list"
             >
-                ↻ Refresh
+                <span>↻</span> Refresh
             </button>
-        </div>
+        </aside>
     );
 }
