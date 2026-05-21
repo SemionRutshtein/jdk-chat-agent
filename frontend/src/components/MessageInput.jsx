@@ -51,25 +51,34 @@ export default function MessageInput({ onSend, disabled }) {
                         placeholder="Ask about Java — lambdas, GC, virtual threads…"
                         disabled={disabled}
                         rows={1}
+                        aria-label="Chat message"
                         className="flex-1 bg-transparent text-ink placeholder-ink-4 text-sm resize-none focus:outline-none disabled:opacity-50 leading-relaxed"
                         style={{ minHeight: '24px' }}
                     />
                     <div className="flex items-center gap-2 flex-shrink-0 pb-0.5">
                         {input.length > 0 && (
-                            <span className={`text-[11px] font-mono tabular-nums ${
-                                overLimit ? 'text-accent' : nearLimit ? 'text-warn' : 'text-ink-4'
-                            }`}>
+                            <span
+                                className={`text-[11px] font-mono tabular-nums ${
+                                    overLimit ? 'text-accent' : nearLimit ? 'text-warn' : 'text-ink-4'
+                                }`}
+                                aria-live="polite"
+                            >
                                 {charsLeft}
                             </span>
                         )}
                         <button
+                            type="button"
                             onClick={submit}
                             disabled={disabled || !input.trim() || overLimit}
                             className="btn-primary text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
                             title="Send (Enter)"
+                            aria-label="Send message"
                         >
                             {disabled ? (
-                                <span className="inline-block w-3 h-3 border-2 border-accent-ink/40 border-t-accent-ink rounded-full animate-spin" />
+                                <span
+                                    className="inline-block w-3 h-3 border-2 border-accent-ink/40 border-t-accent-ink rounded-full animate-spin"
+                                    aria-hidden="true"
+                                />
                             ) : (
                                 <>
                                     Send <span aria-hidden>↵</span>
