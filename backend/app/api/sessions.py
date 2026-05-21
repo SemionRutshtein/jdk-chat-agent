@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Query
 from app.models import SessionSummary, SessionsResponse
 from app.database import SessionLocal, ChatSession, ChatMessage, User
 from app.auth.dependencies import get_current_user
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 logger = logging.getLogger(__name__)
 
@@ -18,11 +18,12 @@ async def list_sessions(
     """List all chat sessions, newest first."""
     db = SessionLocal()
     try:
-        total = db.query(func.count(ChatSession.id)).filter(ChatSession.user_id == user.id).scalar()
+        user_filter = or_(ChatSession.user_id == user.id, ChatSession.user_id == None)
+        total = db.query(func.count(ChatSession.id)).filter(user_filter).scalar()
 
         sessions = (
             db.query(ChatSession)
-            .filter(ChatSession.user_id == user.id)
+            .filter(user_filter)
             .order_by(ChatSession.updated_at.desc())
             .offset(offset)
             .limit(limit)

@@ -155,6 +155,18 @@ class OrchestratorAgent:
         retrieved_docs = self.retriever.retrieve(user_query, java_version, k=5)
 
         if not retrieved_docs:
+            if session_id:
+                try:
+                    session = self.db.query(ChatSession).filter_by(id=session_id).first()
+                    if not session:
+                        session = ChatSession(id=session_id, user_id=user_id)
+                        self.db.add(session)
+                    self.db.add(ChatMessage(session_id=session_id, role="user", content=user_query, java_version=java_version))
+                    session.updated_at = datetime.utcnow()
+                    self.db.commit()
+                except Exception as e:
+                    logger.error(f"DB save error (empty RAG): {e}")
+                    self.db.rollback()
             yield sse({"type": "token", "text": f"The Java {java_version} documentation index is still being built (first-boot seeding). Please wait a few minutes and try again."})
             yield sse({"type": "citations", "citations": []})
             yield sse({"type": "done"})
