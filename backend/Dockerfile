@@ -1,5 +1,6 @@
 FROM python:3.11-slim
 
+# build: 2026-05-21
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
