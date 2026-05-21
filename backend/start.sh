@@ -10,8 +10,9 @@ python init_db.py
 # 2. RAG seed - synchronous, before uvicorn starts.
 #    Runs with full available RAM (uvicorn not yet running).
 #    Persistent volume at /app/chroma_data -> skips instantly on subsequent deploys.
+#    NOTE: heredoc is in the `if` condition so set -e doesn't trap its sys.exit(1).
 echo "[2/3] Checking RAG vector store..."
-python - <<'PYEOF'
+if python - <<'PYEOF'
 import sys
 import chromadb
 from app.config import config
@@ -29,8 +30,9 @@ except Exception:
 print("[rag] seeding vector store - takes ~5-15 min on first boot", flush=True)
 sys.exit(1)
 PYEOF
-
-if [ $? -ne 0 ]; then
+then
+    echo "[rag] skip"
+else
     python -u rag_init.py
     echo "[rag] init complete"
 fi
