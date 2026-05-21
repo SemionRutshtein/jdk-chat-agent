@@ -7,8 +7,8 @@ echo "=== Java Docs Assistant backend starting ==="
 echo "[1/3] Initializing database…"
 python init_db.py
 
-# 2. Background: RAG vector store seed (long on first boot; safe to defer
-#    because server can answer health + auth while embeddings build).
+# 2. Background: RAG vector store seed.
+#    Uses persistent volume at /app/chroma_data — skips if already seeded.
 echo "[2/3] Scheduling RAG init in background…"
 (
     python - <<'PYEOF'
@@ -20,17 +20,17 @@ try:
     client = chromadb.PersistentClient(path=config.CHROMA_PATH)
     col = client.get_collection("java-8")
     if col.count() > 0:
-        print("[rag] already initialized — skipping")
+        print(f"[rag] already initialized ({col.count()} docs in java-8) — skipping", flush=True)
         sys.exit(0)
-except Exception:
+except Exception as e:
     pass
-print("[rag] seeding vector store (this can take minutes on first boot)…")
+print("[rag] starting vector store seed (first boot — may take 5-10 min)…", flush=True)
 sys.exit(1)
 PYEOF
     if [ $? -ne 0 ]; then
-        python rag_init.py && echo "[rag] init complete" || echo "[rag] init FAILED — server continues running"
+        python -u rag_init.py 2>&1 && echo "[rag] init complete ✓" || echo "[rag] init FAILED — server continues running"
     fi
-) &
+) 2>&1 | while IFS= read -r line; do echo "[rag-bg] $line"; done &
 
 # 3. Foreground: uvicorn. Railway injects PORT; fallback 8000 for local.
 echo "[3/3] Starting uvicorn on port ${PORT:-8000}…"

@@ -80,7 +80,7 @@ class OrchestratorAgent:
         if not retrieved_docs:
             return ChatResponse(
                 session_id=session_id or "unknown",
-                response=f"No relevant documentation found in Java {java_version} docs for your query.",
+                response=f"The Java {java_version} documentation index is still being built (first-boot seeding). Please wait a few minutes and try again.",
                 citations=[],
                 source_version=java_version,
                 timestamp=datetime.utcnow(),
@@ -155,7 +155,7 @@ class OrchestratorAgent:
         retrieved_docs = self.retriever.retrieve(user_query, java_version, k=5)
 
         if not retrieved_docs:
-            yield sse({"type": "token", "text": f"No relevant documentation found in Java {java_version} docs for your query."})
+            yield sse({"type": "token", "text": f"The Java {java_version} documentation index is still being built (first-boot seeding). Please wait a few minutes and try again."})
             yield sse({"type": "citations", "citations": []})
             yield sse({"type": "done"})
             return

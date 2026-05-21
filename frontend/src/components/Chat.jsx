@@ -18,28 +18,35 @@ function HealthBadge() {
         let cancelled = false;
         const check = async () => {
             try {
-                await chatAPI.health();
-                if (!cancelled) setStatus('ok');
+                const res = await chatAPI.health();
+                if (!cancelled) {
+                    const { status: s, rag_ready } = res.data;
+                    if (s !== 'ok' && s !== 'degraded') setStatus('error');
+                    else if (!rag_ready) setStatus('warming');
+                    else setStatus('ok');
+                }
             } catch {
                 if (!cancelled) setStatus('error');
             }
         };
         check();
-        const id = setInterval(check, 30000);
+        const id = setInterval(check, 15000);
         return () => { cancelled = true; clearInterval(id); };
     }, []);
 
     const styles = {
         ok:       { dot: 'bg-ok',     ring: 'border-ok/40',     label: 'Online'   },
+        warming:  { dot: 'bg-warn animate-pulse', ring: 'border-warn/40', label: 'Warming up' },
         error:    { dot: 'bg-accent', ring: 'border-accent/40', label: 'Offline'  },
-        checking: { dot: 'bg-warn animate-pulse', ring: 'border-warn/40', label: 'Checking' },
-    }[status];
+        checking: { dot: 'bg-ink-4 animate-pulse', ring: 'border-rule',   label: 'Checking' },
+    }[status] || { dot: 'bg-ink-4', ring: 'border-rule', label: status };
 
     return (
         <span
             className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-ink-3 bg-paper-3/50 border ${styles.ring} rounded-pill`}
             role="status"
             aria-label={`Backend status: ${styles.label}`}
+            title={status === 'warming' ? 'RAG index building — queries will work once ready (first deploy only)' : undefined}
         >
             <span className={`w-1.5 h-1.5 rounded-full ${styles.dot}`} />
             {styles.label}

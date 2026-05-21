@@ -54,3 +54,4 @@ class HealthResponse(BaseModel):
     postgres: bool
     redis: bool
     chroma: bool
+    rag_ready: bool = False
