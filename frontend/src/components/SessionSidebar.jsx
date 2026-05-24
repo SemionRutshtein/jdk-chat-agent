@@ -96,7 +96,7 @@ function SessionGroup({ sessions, label, currentSessionId, onSelectSession }) {
     );
 }
 
-export default function SessionSidebar({ currentSessionId, onSelectSession, onNewSession, refreshKey }) {
+export default function SessionSidebar({ currentSessionId, onSelectSession, onNewSession, onClose, refreshKey }) {
     const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [query, setQuery] = useState('');
@@ -129,11 +129,25 @@ export default function SessionSidebar({ currentSessionId, onSelectSession, onNe
     const hasAny = filtered.length > 0;
 
     return (
-        <aside className="w-72 sm:w-64 h-full flex-shrink-0 bg-paper-2/80 backdrop-blur-md border-r border-rule flex flex-col">
-            {/* Wordmark */}
-            <div className="px-4 py-4 border-b border-rule flex items-center gap-2">
-                <span className="wordmark-dot" />
-                <span className="font-display font-semibold text-sm tracking-tight text-ink">jdk · agent</span>
+        <aside className="w-[80vw] max-w-xs sm:w-64 h-full flex-shrink-0 bg-paper-2/80 backdrop-blur-md border-r border-rule flex flex-col pt-safe">
+            {/* Wordmark + close button on mobile */}
+            <div className="px-4 py-4 border-b border-rule flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                    <span className="wordmark-dot" />
+                    <span className="font-display font-semibold text-sm tracking-tight text-ink">jdk · agent</span>
+                </div>
+                {onClose && (
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="lg:hidden flex items-center justify-center w-9 h-9 rounded-input text-ink-3 hover:text-ink hover:bg-paper-3 transition-colors duration-short ease-out"
+                        aria-label="Close sidebar"
+                    >
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                            <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                        </svg>
+                    </button>
+                )}
             </div>
 
             {/* New chat */}
@@ -161,7 +175,7 @@ export default function SessionSidebar({ currentSessionId, onSelectSession, onNe
             </div>
 
             {/* List */}
-            <nav className="flex-1 overflow-y-auto px-2 pb-2" aria-label="Chat sessions">
+            <nav className="flex-1 overflow-y-auto ios-scroll px-2 pb-2" aria-label="Chat sessions">
                 {loading && (
                     <div className="space-y-1.5 px-1 pt-1">
                         {[1,2,3].map(i => (

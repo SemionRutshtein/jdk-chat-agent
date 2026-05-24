@@ -206,7 +206,7 @@ export default function Chat({ user, onLogout }) {
     };
 
     return (
-        <div className="flex h-screen text-ink overflow-hidden">
+        <div className="flex h-screen text-ink overflow-hidden" style={{ height: '100dvh' }}>
             {/* Sidebar — slide-over on mobile */}
             <div
                 className={`fixed inset-0 z-30 lg:hidden transition-opacity duration-short ease-out ${
@@ -226,23 +226,27 @@ export default function Chat({ user, onLogout }) {
                     currentSessionId={sessionId}
                     onSelectSession={handleSelectSession}
                     onNewSession={handleNewSession}
+                    onClose={() => setSidebarOpen(false)}
                     refreshKey={sidebarRefreshKey}
                 />
             </div>
 
             <div className="flex flex-col flex-1 min-w-0">
                 {/* Header */}
-                <header className="bg-paper-2/60 backdrop-blur-sm border-b border-rule px-3 sm:px-5 py-3 flex-shrink-0">
+                <header className="bg-paper-2/60 backdrop-blur-sm border-b border-rule px-3 sm:px-5 py-3 flex-shrink-0 pt-safe">
                     <div className="flex justify-between items-center gap-3">
                         <div className="flex items-center gap-2.5 min-w-0">
+                            {/* Hamburger — 44px touch target */}
                             <button
                                 onClick={() => setSidebarOpen(true)}
-                                className="lg:hidden btn-ghost p-1.5"
+                                className="lg:hidden -ml-1 flex items-center justify-center w-11 h-11 text-ink-3 hover:text-ink hover:bg-paper-3 rounded-input transition-colors duration-short ease-out"
                                 aria-label="Open sessions"
                             >
-                                <span className="block w-4 h-[2px] bg-current mb-1" />
-                                <span className="block w-4 h-[2px] bg-current mb-1" />
-                                <span className="block w-4 h-[2px] bg-current" />
+                                <svg width="18" height="14" viewBox="0 0 18 14" fill="none" aria-hidden="true">
+                                    <rect y="0" width="18" height="2" rx="1" fill="currentColor"/>
+                                    <rect y="6" width="18" height="2" rx="1" fill="currentColor"/>
+                                    <rect y="12" width="18" height="2" rx="1" fill="currentColor"/>
+                                </svg>
                             </button>
                             <span className="wordmark-dot hidden sm:inline-block" />
                             <h1 className="font-display text-base font-semibold text-ink tracking-tight truncate">

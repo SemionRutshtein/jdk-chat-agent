@@ -40,7 +40,7 @@ export default function MessageInput({ onSend, disabled }) {
     const nearLimit = charsLeft < 100 && !overLimit;
 
     return (
-        <div className="border-t border-rule bg-paper-2/70 backdrop-blur-sm px-4 py-3 flex-shrink-0">
+        <div className="border-t border-rule bg-paper-2/70 backdrop-blur-sm px-3 sm:px-4 pt-3 flex-shrink-0 pb-safe" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
             <div className="max-w-3xl mx-auto">
                 <div className={`flex items-end gap-2 bg-paper-3 border rounded-card px-3 py-2.5 transition-colors duration-short ease-out ${
                     overLimit
@@ -52,7 +52,7 @@ export default function MessageInput({ onSend, disabled }) {
                         value={input}
                         onChange={e => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder="Ask about Java — lambdas, GC, virtual threads…"
+                        placeholder="Ask about Java…"
                         disabled={disabled}
                         rows={1}
                         aria-label="Chat message"
@@ -62,7 +62,7 @@ export default function MessageInput({ onSend, disabled }) {
                     <div className="flex items-center gap-2 flex-shrink-0 pb-0.5">
                         {input.length > 0 && (
                             <span
-                                className={`text-[11px] font-mono tabular-nums ${
+                                className={`hidden sm:inline text-[11px] font-mono tabular-nums ${
                                     overLimit ? 'text-accent' : nearLimit ? 'text-warn' : 'text-ink-4'
                                 }`}
                                 aria-live="polite"
@@ -70,11 +70,23 @@ export default function MessageInput({ onSend, disabled }) {
                                 {charsLeft}
                             </span>
                         )}
+                        {/* Mobile char counter (compact) */}
+                        {input.length > 0 && (overLimit || nearLimit) && (
+                            <span
+                                className={`sm:hidden text-[11px] font-mono tabular-nums ${
+                                    overLimit ? 'text-accent' : 'text-warn'
+                                }`}
+                                aria-live="polite"
+                            >
+                                {charsLeft}
+                            </span>
+                        )}
+                        {/* Send button — 44px min touch target on mobile */}
                         <button
                             type="button"
                             onClick={submit}
                             disabled={disabled || !input.trim() || overLimit}
-                            className="btn-primary text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
+                            className="btn-primary text-xs px-3 py-2 sm:py-1.5 min-h-[44px] sm:min-h-0 inline-flex items-center gap-1.5"
                             title="Send (Enter)"
                             aria-label="Send message"
                         >
@@ -85,13 +97,14 @@ export default function MessageInput({ onSend, disabled }) {
                                 />
                             ) : (
                                 <>
-                                    Send <span aria-hidden>↵</span>
+                                    Send <span aria-hidden className="hidden sm:inline">↵</span>
                                 </>
                             )}
                         </button>
                     </div>
                 </div>
-                <p className="text-[11px] text-ink-4 mt-1.5 text-right font-mono tracking-wide">
+                {/* Keyboard hint — desktop only */}
+                <p className="hidden sm:block text-[11px] text-ink-4 mt-1.5 text-right font-mono tracking-wide">
                     <kbd className="px-1 py-0.5 bg-paper-3 border border-rule rounded text-[10px]">↵</kbd> send · <kbd className="px-1 py-0.5 bg-paper-3 border border-rule rounded text-[10px]">⇧↵</kbd> newline
                 </p>
             </div>

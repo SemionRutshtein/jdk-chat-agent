@@ -49,9 +49,11 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body {
-    overflow-x: clip;
+    overflow-x: hidden;
     background: var(--color-paper);
     color: var(--color-ink);
+    /* Prevent iOS pull-to-refresh / overscroll from breaking layout */
+    overscroll-behavior-y: none;
 }
 
 body {
@@ -60,6 +62,7 @@ body {
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: "cv11", "ss03", "ss01";
     min-height: 100vh;
+    min-height: 100dvh;
     background:
         radial-gradient(1100px 600px at 80% -10%, oklch(28% 0.10 25 / 0.18), transparent 60%),
         radial-gradient(900px 500px at -10% 110%, oklch(20% 0.06 25 / 0.22), transparent 60%),
@@ -68,6 +71,21 @@ body {
 
 /* Selection */
 ::selection { background: var(--color-accent); color: var(--color-accent-ink); }
+
+/* iOS momentum scroll for overflow areas */
+.ios-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+}
+
+/* Safe-area padding helpers (Dynamic Island / home bar) */
+.pt-safe  { padding-top: env(safe-area-inset-top); }
+.pb-safe  { padding-bottom: env(safe-area-inset-bottom); }
+.pl-safe  { padding-left: env(safe-area-inset-left); }
+.pr-safe  { padding-right: env(safe-area-inset-right); }
+
+/* Tap highlight — disable default iOS grey flash */
+* { -webkit-tap-highlight-color: transparent; }
 
 /* Scrollbar — thin, restrained */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
