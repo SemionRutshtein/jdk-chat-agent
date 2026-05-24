@@ -29,7 +29,7 @@ export default function LoginPage({ onAuth }) {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center px-4 py-10">
+        <div className="min-h-screen flex items-center justify-center px-4 py-10 pt-safe pb-safe" style={{ minHeight: '100dvh' }}>
             <div className="w-full max-w-md">
                 {/* Wordmark */}
                 <div className="mb-10 text-center">
@@ -39,7 +39,7 @@ export default function LoginPage({ onAuth }) {
                             jdk · agent
                         </span>
                     </div>
-                    <h1 className="font-display text-4xl sm:text-[2.75rem] font-semibold text-ink leading-[1.05] tracking-tight">
+                    <h1 className="font-display text-3xl sm:text-4xl lg:text-[2.75rem] font-semibold text-ink leading-[1.05] tracking-tight">
                         Ask the <span className="text-accent">Java specs</span><br/>
                         anything.
                     </h1>

@@ -26,7 +26,7 @@ function CopyButton({ text }) {
 function UserMessage({ content }) {
     return (
         <div className="flex justify-end mb-5 animate-fade-up">
-            <div className="max-w-2xl bg-accent text-accent-ink rounded-card rounded-tr-sm px-4 py-3 shadow-[0_8px_24px_-8px_oklch(62%_0.22_25_/_0.45)]">
+            <div className="max-w-[85%] sm:max-w-2xl bg-accent text-accent-ink rounded-card rounded-tr-sm px-4 py-3 shadow-[0_8px_24px_-8px_oklch(62%_0.22_25_/_0.45)]">
                 <p className="text-[14px] whitespace-pre-wrap leading-relaxed font-medium">{content}</p>
             </div>
         </div>
@@ -167,14 +167,14 @@ function StarterGrid({ onPick, disabled }) {
 
 function EmptyHero({ onPickStarter, disabled }) {
     return (
-        <div className="mt-10 sm:mt-16 animate-fade-up">
+        <div className="mt-6 sm:mt-16 animate-fade-up">
             <div className="inline-flex items-center gap-2 mb-4">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent" />
                 <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-3">
                     Java · official specs
                 </span>
             </div>
-            <h2 className="font-display text-3xl sm:text-[2.5rem] font-semibold text-ink leading-[1.1] tracking-tight mb-3">
+            <h2 className="font-display text-2xl sm:text-3xl lg:text-[2.5rem] font-semibold text-ink leading-[1.1] tracking-tight mb-3">
                 What do you want to <span className="text-accent">understand</span>?
             </h2>
             <p className="text-sm text-ink-3 max-w-lg mb-6">
@@ -197,7 +197,7 @@ export default function MessageList({ messages, loading, onPickStarter, disabled
     }, [onPickStarter]);
 
     return (
-        <div className="flex-1 overflow-y-auto px-4 py-6">
+        <div className="flex-1 overflow-y-auto ios-scroll px-3 sm:px-4 py-6">
             <div className="max-w-3xl mx-auto">
                 {messages.length === 0 && !loading && (
                     <EmptyHero onPickStarter={safePick} disabled={disabled} />
