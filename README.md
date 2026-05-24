@@ -177,10 +177,10 @@ cd jdk-chat-agent
 
 # 2. Create .env
 cat > .env << 'EOF'
-CLAUDE_API_KEY=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
+CLAUDE_API_KEY=(******)
 POSTGRES_URL=postgresql://rag_user:rag_password@postgres:5432/java_rag
 REDIS_URL=redis://redis:6379
-JWT_SECRET=YGmOp7zP7Xmi-7FBGv-JvULWVgxQ-eAAU4sAHj0oiKteKOzoYYAlcNFanvmh1_IK
+JWT_SECRET=(******)
 DEBUG=False
 EOF
 
@@ -336,8 +336,8 @@ Railway → **backend** service → **Variables** → add each:
 ```
 POSTGRES_URL   postgresql://postgres:pJWqYiNDzZrWNhABwPsGObbBdHElmYKJ@postgres.railway.internal:5432/railway
 REDIS_URL      redis://default:KjPhBQDiWNtFgCCeWHtXuyoOkvaBNlnv@redis.railway.internal:6379
-CLAUDE_API_KEY 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
-JWT_SECRET     YGmOp7zP7Xmi-7FBGv-JvULWVgxQ-eAAU4sAHj0oiKteKOzoYYAlcNFanvmh1_IK
+CLAUDE_API_KEY (******)
+JWT_SECRET     (******)
 DEBUG          False
 ```
 
