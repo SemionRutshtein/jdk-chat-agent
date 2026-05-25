@@ -1,46 +1,51 @@
-import chromadb
+import logging
 import os
 from typing import List, Tuple
 
+import chromadb
+
+logger = logging.getLogger(__name__)
+
+
 class VectorStore:
-    def __init__(self, persist_path: str):
+    def __init__(self, persist_path: str) -> None:
         self.persist_path = persist_path
         os.makedirs(persist_path, exist_ok=True)
         self.client = chromadb.PersistentClient(path=persist_path)
-        self.collections = {}
+        self._collections: dict = {}
 
     def get_or_create_collection(self, java_version: str):
-        collection_name = f"java-{java_version}"
-        if collection_name not in self.collections:
-            self.collections[collection_name] = self.client.get_or_create_collection(
-                name=collection_name,
-                metadata={"hnsw:space": "cosine"}
+        name = f"java-{java_version}"
+        if name not in self._collections:
+            self._collections[name] = self.client.get_or_create_collection(
+                name=name,
+                metadata={"hnsw:space": "cosine"},
             )
-        return self.collections[collection_name]
+        return self._collections[name]
 
-    def add_documents(self, java_version: str, documents: List[Tuple[str, dict]], embeddings: List[List[float]]):
+    def add_documents(
+        self,
+        java_version: str,
+        documents: List[Tuple[str, dict]],
+        embeddings: List[List[float]],
+    ) -> None:
         collection = self.get_or_create_collection(java_version)
-        ids = []
-        texts = []
-        metadatas = []
-
-        for i, (text, metadata) in enumerate(documents):
-            ids.append(f"{java_version}_{i}")
-            texts.append(text)
-            metadatas.append(metadata)
-
+        ids = [f"{java_version}_{i}" for i in range(len(documents))]
+        texts = [text for text, _ in documents]
+        metadatas = [meta for _, meta in documents]
         collection.add(ids=ids, documents=texts, embeddings=embeddings, metadatas=metadatas)
-        print(f"Added {len(ids)} documents to java-{java_version}")
+        logger.info("Added %d documents to java-%s", len(ids), java_version)
 
-    def search(self, java_version: str, query_embedding: List[float], k: int = 5) -> List[dict]:
+    def search(
+        self, java_version: str, query_embedding: List[float], k: int = 5
+    ) -> List[dict]:
         collection = self.get_or_create_collection(java_version)
         results = collection.query(query_embeddings=[query_embedding], n_results=k)
-
-        docs = []
-        for i in range(len(results['documents'][0])):
-            docs.append({
-                'text': results['documents'][0][i],
-                'metadata': results['metadatas'][0][i],
-                'distance': results['distances'][0][i]
-            })
-        return docs
+        return [
+            {
+                "text": results["documents"][0][i],
+                "metadata": results["metadatas"][0][i],
+                "distance": results["distances"][0][i],
+            }
+            for i in range(len(results["documents"][0]))
+        ]

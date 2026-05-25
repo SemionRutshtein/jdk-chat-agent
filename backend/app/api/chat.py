@@ -1,51 +1,74 @@
 import logging
 import uuid
-from fastapi import APIRouter, Depends, HTTPException
+from functools import lru_cache
+
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
-from app.models import ChatRequest, ChatResponse
+from sqlalchemy.orm import Session
+
 from app.agents.orchestrator import OrchestratorAgent
+from app.auth.dependencies import get_current_user
+from app.config import config
+from app.database import User, get_db
+from app.models import ChatRequest, ChatResponse
+from app.rag.embedder import Embedder
 from app.rag.retriever import Retriever
 from app.rag.vector_store import VectorStore
-from app.rag.embedder import Embedder
-from app.config import config
-from app.auth.dependencies import get_current_user
-from app.database import User
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
-_agent = None
+
+@lru_cache(maxsize=1)
+def _get_retriever() -> Retriever:
+    vector_store = VectorStore(config.CHROMA_PATH)
+    embedder = Embedder(config.EMBEDDING_MODEL)
+    return Retriever(vector_store, embedder)
+
 
 def get_agent() -> OrchestratorAgent:
-    global _agent
-    if _agent is None:
-        vector_store = VectorStore(config.CHROMA_PATH)
-        embedder = Embedder(config.EMBEDDING_MODEL)
-        retriever = Retriever(vector_store, embedder)
-        _agent = OrchestratorAgent(retriever)
-    return _agent
+    return OrchestratorAgent(_get_retriever())
+
 
 @router.post("", response_model=ChatResponse)
-async def chat(request: ChatRequest, user: User = Depends(get_current_user)) -> ChatResponse:
-    if request.java_version not in ["8", "17", "21"]:
-        raise HTTPException(status_code=400, detail="Invalid Java version. Must be one of: 8, 17, 21")
-
+def chat(
+    request: ChatRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> ChatResponse:
     session_id = request.session_id or str(uuid.uuid4())
-    logger.info(f"Chat request: version={request.java_version} session={session_id} user={user.email}")
-    return get_agent().process_query(session_id=session_id, user_query=request.message, java_version=request.java_version, user_id=user.id)
+    logger.info(
+        "Chat request: version=%s session=%s user=%s",
+        request.java_version,
+        session_id,
+        user.email,
+    )
+    return get_agent().process_query(
+        db=db,
+        session_id=session_id,
+        user_query=request.message,
+        java_version=request.java_version,
+        user_id=user.id,
+    )
 
 
 @router.post("/stream")
-async def chat_stream(request: ChatRequest, user: User = Depends(get_current_user)):
-    if request.java_version not in ["8", "17", "21"]:
-        raise HTTPException(status_code=400, detail="Invalid Java version. Must be one of: 8, 17, 21")
-
+def chat_stream(
+    request: ChatRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
     session_id = request.session_id or str(uuid.uuid4())
-    logger.info(f"Stream request: version={request.java_version} session={session_id} user={user.email}")
-
+    logger.info(
+        "Stream request: version=%s session=%s user=%s",
+        request.java_version,
+        session_id,
+        user.email,
+    )
     return StreamingResponse(
         get_agent().stream_query(
+            db=db,
             session_id=session_id,
             user_query=request.message,
             java_version=request.java_version,

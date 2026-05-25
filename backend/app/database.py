@@ -1,10 +1,16 @@
-from sqlalchemy import create_engine, Column, String, Text, DateTime, JSON, ForeignKey
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship
-from datetime import datetime
+import logging
 import uuid
+from datetime import datetime
+
+from sqlalchemy import Column, DateTime, ForeignKey, JSON, String, Text, create_engine
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session
+
 from app.config import config
 
+logger = logging.getLogger(__name__)
+
 Base = declarative_base()
+
 
 class User(Base):
     __tablename__ = "users"
@@ -16,16 +22,20 @@ class User(Base):
 
     sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")
 
+
 class ChatSession(Base):
     __tablename__ = "chat_sessions"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String, ForeignKey("users.id"), nullable=True)  # nullable for legacy sessions
+    user_id = Column(String, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = relationship("User", back_populates="sessions")
-    messages = relationship("ChatMessage", back_populates="session", cascade="all, delete-orphan")
+    messages = relationship(
+        "ChatMessage", back_populates="session", cascade="all, delete-orphan"
+    )
+
 
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
@@ -40,6 +50,7 @@ class ChatMessage(Base):
 
     session = relationship("ChatSession", back_populates="messages")
 
+
 class DocumentMetadata(Base):
     __tablename__ = "doc_metadata"
 
@@ -49,14 +60,22 @@ class DocumentMetadata(Base):
     chunks_count = Column(String)
     embedded_at = Column(DateTime, default=datetime.utcnow)
 
-engine = create_engine(config.POSTGRES_URL)
-SessionLocal = sessionmaker(bind=engine)
 
-def init_db():
+engine = create_engine(
+    config.POSTGRES_URL,
+    pool_size=10,
+    max_overflow=20,
+    pool_pre_ping=True,
+)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def init_db() -> None:
     Base.metadata.create_all(bind=engine)
-    print("Database tables created successfully")
+    logger.info("Database tables created / verified")
 
-def get_db():
+
+def get_db() -> Session:
     db = SessionLocal()
     try:
         yield db
